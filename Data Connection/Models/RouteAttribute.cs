@@ -15,7 +15,14 @@ namespace DataConnection.Models
 
         public string GetRelationshipRoute(int? id, string relative)
         {
-            return $"{IndexRoute}/{id}/{relative}";
+            if (id != null)
+            {
+                return $"{IndexRoute}/{id}/{relative}";
+            }
+            else
+            {
+                return $"{IndexRoute}/{relative}";
+            }
         }
 
         public RouteAttribute(string baseRoute)
