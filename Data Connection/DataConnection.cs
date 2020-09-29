@@ -74,7 +74,6 @@ namespace DataConnection
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 #endif
-
             IRestResponse<T> restResponse = await RestClient.ExecuteAsync<T>(restRequest, cancellationToken);
 
             if (!restResponse.IsSuccessful)

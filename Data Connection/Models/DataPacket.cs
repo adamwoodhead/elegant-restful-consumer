@@ -132,6 +132,21 @@ namespace DataConnection.Models
             return restResponse.Data;
         }
 
+        public async Task<G> PostRelatedAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
+        {
+            RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
+
+            string url = routeAttribute.GetRelationshipRoute(id, relation);
+
+            RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+
+            request.AddJsonBody(this);
+
+            IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, cancellationToken);
+
+            return restResponse.Data;
+        }
+
         public async Task<T> CreateAsync(CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = this.GetType().GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
