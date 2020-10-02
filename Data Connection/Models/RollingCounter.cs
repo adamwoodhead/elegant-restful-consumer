@@ -11,7 +11,7 @@ namespace DataConnection.Models
     {
         internal int Limit { get; set; }
 
-        private List<double> limitedList { get; set; }
+        private List<double> LimitedList { get; set; }
 
         public int Slipped { get; private set; } = 0;
 
@@ -21,36 +21,36 @@ namespace DataConnection.Models
 
         public double Avg
         {
-            get => limitedList.Average();
+            get => LimitedList.Average();
         }
 
         public RollingCounter(int count)
         {
             Limit = count;
-            limitedList = new List<double>(Limit);
+            LimitedList = new List<double>(Limit);
         }
 
         // The Count read-only property returns the number
         // of items in the collection.
-        public int Count => limitedList.Count;
+        public int Count => LimitedList.Count;
 
         public void Slip(double obj)
         {
-            while (limitedList.Count >= Limit)
+            while (LimitedList.Count >= Limit)
             {
-                limitedList.Remove(limitedList.Last());
+                LimitedList.Remove(LimitedList.Last());
             }
 
-            limitedList.Insert(0, obj);
+            LimitedList.Insert(0, obj);
 
-            Min = limitedList.Min();
-            Max = limitedList.Max();
+            Min = LimitedList.Min();
+            Max = LimitedList.Max();
             Slipped++;
         }
 
         public void CopyTo(Array array, int index)
         {
-            foreach (double i in limitedList)
+            foreach (double i in LimitedList)
             {
                 array.SetValue(i, index);
                 index += 1;
@@ -59,12 +59,12 @@ namespace DataConnection.Models
 
         public IEnumerator<double> GetEnumerator()
         {
-            return limitedList.GetEnumerator();
+            return LimitedList.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return limitedList.GetEnumerator();
+            return LimitedList.GetEnumerator();
         }
     }
 }
