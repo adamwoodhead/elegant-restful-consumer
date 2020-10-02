@@ -15,7 +15,9 @@ namespace DataConnection
 {
     public static class DataConnection
     {
+#pragma warning disable IDE0051 // Remove unused private members
         private static string AuthenticationToken { get; set; }
+#pragma warning restore IDE0051 // Remove unused private members
 
         public static string BaseURL { get; private set; }
 
@@ -78,7 +80,7 @@ namespace DataConnection
 
             if (!restResponse.IsSuccessful)
             {
-               throw new Exception("");
+               throw new Exception($"{restResponse.StatusCode} : {restResponse.Content}");
             }
 
 #if DEBUG
