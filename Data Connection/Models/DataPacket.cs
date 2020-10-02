@@ -58,6 +58,8 @@ namespace DataConnection.Models
             return completeData;
         }
 
+        #region Pagination
+
         public static async Task<PaginatedCollection<T>> PaginateAsync()
         {
             return await PaginatedCollection<T>.Instantiate(null, null, null);
@@ -78,7 +80,7 @@ namespace DataConnection.Models
             return await PaginatedCollection<T>.Instantiate(extension, id, searchTerm);
         }
 
-        public static async Task<G> GetRelatedModelAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
+        public static async Task<PaginatedCollection<G>> GetRelatedModelPaginationAsync<G>(string relation, int? id)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -86,12 +88,17 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, cancellationToken);
+            IRestResponse<PaginatedCollection<G>> restResponse = await DataConnection.RequestAsync<PaginatedCollection<G>>(request, default);
 
             return restResponse.Data;
         }
 
-        public static async Task<List<G>> GetRelatedModelListAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
+
+        #endregion
+
+        #region Relations
+
+        public static async Task<G> GetRelatedModelAsync<G>(string relation, int? id)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -99,12 +106,12 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<List<G>> restResponse = await DataConnection.RequestAsync<List<G>>(request, cancellationToken);
+            IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, default);
 
             return restResponse.Data;
         }
 
-        public static async Task<PaginatedCollection<G>> GetRelatedModelPaginationAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
+        public static async Task<List<G>> GetRelatedModelListAsync<G>(string relation, int? id)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -112,14 +119,18 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<PaginatedCollection<G>> restResponse = await DataConnection.RequestAsync<PaginatedCollection<G>>(request, cancellationToken);
+            IRestResponse<List<G>> restResponse = await DataConnection.RequestAsync<List<G>>(request, default);
 
             return restResponse.Data;
         }
 
-        public static async Task<T> GetAsync(int? id, CancellationToken cancellationToken = default) => await GetAsync((int)id, cancellationToken);
+        #endregion
 
-        public static async Task<T> GetAsync(int id, CancellationToken cancellationToken = default)
+        #region GET
+
+        public static async Task<T> GetAsync(int? id) => await GetAsync((int)id);
+
+        public static async Task<T> GetAsync(int id)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -127,11 +138,14 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<T> restResponse = await DataConnection.RequestAsync<T>(request, cancellationToken);
+            IRestResponse<T> restResponse = await DataConnection.RequestAsync<T>(request, default);
 
             return restResponse.Data;
         }
 
+        #endregion
+
+        #region POST
         public async Task<G> PostRelatedAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
@@ -159,8 +173,15 @@ namespace DataConnection.Models
 
             IRestResponse<T> restResponse = await DataConnection.RequestAsync<T>(request, cancellationToken);
 
+            this.ID = (restResponse.Data as DataPacket<T>).ID;
+            this.CreatedAt = (restResponse.Data as DataPacket<T>).CreatedAt;
+            this.UpdatedAt = (restResponse.Data as DataPacket<T>).UpdatedAt;
+
             return restResponse.Data;
         }
+        #endregion
+
+        #region UPDATE
 
         public async Task<T> UpdateAsync(CancellationToken cancellationToken = default)
         {
@@ -174,8 +195,14 @@ namespace DataConnection.Models
 
             IRestResponse<T> restResponse = await DataConnection.RequestAsync<T>(request, cancellationToken);
 
+            this.UpdatedAt = (restResponse.Data as DataPacket<T>).UpdatedAt;
+
             return restResponse.Data;
         }
+
+        #endregion
+
+        #region DELETE
 
         public async Task<bool> DeleteAsync(CancellationToken cancellationToken = default)
         {
@@ -189,5 +216,7 @@ namespace DataConnection.Models
 
             return restResponse.IsSuccessful;
         }
+
+        #endregion
     }
 }
