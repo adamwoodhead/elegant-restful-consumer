@@ -80,7 +80,8 @@ namespace DataConnection
 
             if (!restResponse.IsSuccessful)
             {
-               throw new Exception($"{restResponse.StatusCode} : {restResponse.Content}");
+                Console.WriteLine($"{restResponse.StatusCode} : {restResponse.Content}");
+                throw new Exception($"{restResponse.StatusCode} : {restResponse.Content}");
             }
 
 #if DEBUG

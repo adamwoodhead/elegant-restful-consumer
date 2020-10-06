@@ -29,55 +29,21 @@ namespace DataConnection.Models
         [JsonProperty("updated_at")]
         public DateTime UpdatedAt { get; set; }
 
-        /// <summary>
-        /// Incredibly intensive workload, use with caution
-        /// </summary>
-        /// <returns></returns>
-        public static async Task<List<T>> GetAllParallelAsync()
-        {
-            PaginatedCollection<T> paginatedCollection = await PaginateAsync();
-
-            List<T> completeData = new List<T>();
-
-            List<Task<List<T>>> tasks = new List<Task<List<T>>>();
-
-            foreach (Page<T> page in paginatedCollection.Pages)
-            {
-                tasks.Add(
-                    Task.Run(() => page.GetDataOrInitializeAsync())
-                );
-            }
-
-            await Task.WhenAll(tasks);
-
-            foreach (Page<T> page in paginatedCollection.Pages)
-            {
-                completeData.AddRange(page.Data);
-            }
-
-            return completeData;
-        }
-
         #region Pagination
 
         public static async Task<PaginatedCollection<T>> PaginateAsync()
         {
-            return await PaginatedCollection<T>.Instantiate(null, null, null);
+            return await PaginatedCollection<T>.InstantiateIndex();
         }
 
-        public static async Task<PaginatedCollection<T>> PaginateBy(string extension, int? id)
+        public static async Task<PaginatedCollection<T>> PaginateRelativeAsync(string extension, int? id = null)
         {
-            return await PaginatedCollection<T>.Instantiate(extension, id, null);
+            return await PaginatedCollection<T>.InstantiateExtension(id, extension);
         }
 
-        public static async Task<PaginatedCollection<T>> PaginateSearch(string searchTerm)
+        public static async Task<PaginatedCollection<T>> PaginateSearchAsync(string haystack, string needle)
         {
-            return await PaginatedCollection<T>.Instantiate(null, null, searchTerm);
-        }
-
-        public static async Task<PaginatedCollection<T>> PaginateByAndSearch(string extension, int? id, string searchTerm)
-        {
-            return await PaginatedCollection<T>.Instantiate(extension, id, searchTerm);
+            return await PaginatedCollection<T>.InstantiateSearch(haystack, needle);
         }
 
         public static async Task<PaginatedCollection<G>> GetRelatedModelPaginationAsync<G>(string relation, int? id)
@@ -105,6 +71,21 @@ namespace DataConnection.Models
             string url = routeAttribute.GetRelationshipRoute(id, relation);
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
+
+            IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, default);
+
+            return restResponse.Data;
+        }
+
+        public static async Task<G> PostRelatedModelAsync<G>(string relation, int? id, G obj)
+        {
+            RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
+
+            string url = routeAttribute.GetRelationshipRoute(id, relation);
+
+            RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+
+            request.AddJsonBody(obj);
 
             IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, default);
 
@@ -143,6 +124,32 @@ namespace DataConnection.Models
             return restResponse.Data;
         }
 
+        public static async Task<List<T>> GetAsync()
+        {
+            RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
+
+            string url = routeAttribute.GetIndexRoute();
+
+            RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
+
+            IRestResponse<List<T>> restResponse = await DataConnection.RequestAsync<List<T>>(request, default);
+
+            return restResponse.Data;
+        }
+
+        public static async Task<List<T>> SearchAsync(string haystack, string needle)
+        {
+            RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
+
+            string url = routeAttribute.GetSearchRoute(haystack, needle);
+
+            RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
+
+            IRestResponse<List<T>> restResponse = await DataConnection.RequestAsync<List<T>>(request, default);
+
+            return restResponse.Data;
+        }
+
         #endregion
 
         #region POST
@@ -165,7 +172,7 @@ namespace DataConnection.Models
         {
             RouteAttribute routeAttribute = this.GetType().GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
-            string url = routeAttribute.IndexRoute;
+            string url = routeAttribute.GetIndexRoute();
 
             RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
 

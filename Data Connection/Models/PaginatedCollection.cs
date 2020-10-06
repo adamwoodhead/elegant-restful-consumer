@@ -20,45 +20,65 @@ namespace DataConnection.Models
             BaseURL = url;
         }
 
-        /// <summary>
-        /// Create a book of paginated data - Omit ?page=x from the url
-        /// </summary>
-        /// <param name="url"></param>
-        /// <returns></returns>
-        public static async Task<PaginatedCollection<T>> Instantiate(string extension, int? id, string searchTerm)
+        public static async Task<PaginatedCollection<T>> InstantiateIndex()
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
-            string url = routeAttribute.IndexRoute;
+            string url = routeAttribute.GetPaginatedIndexRoute();
 
-            // Remove leading and trailing slashes
-            url = url.TrimEnd('/');
+            PaginatedCollection<T> book = new PaginatedCollection<T>(url);
 
-            if (!string.IsNullOrEmpty(extension))
+            Page<T> firstPage = new Page<T>(book.BaseURL, 1);
+
+            await firstPage.GetDataOrInitializeAsync();
+
+            book.PageCount = (int)firstPage.TotalPageCount;
+
+            book.Pages = new List<Page<T>>(book.PageCount) { firstPage };
+
+            if (book.PageCount > 1)
             {
-                extension = extension.Trim('/') ?? null;
+                for (int i = 2; i <= book.PageCount; i++)
+                {
+                    book.Pages.Add(new Page<T>(book.BaseURL, i));
+                }
             }
 
-            if (!string.IsNullOrEmpty(searchTerm))
+            return book;
+        }
+
+        public static async Task<PaginatedCollection<T>> InstantiateExtension(int? id, string extension)
+        {
+            RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
+
+            string url = routeAttribute.GetPaginatedRelationshipRoute(id, extension);
+
+            PaginatedCollection<T> book = new PaginatedCollection<T>(url);
+
+            Page<T> firstPage = new Page<T>(book.BaseURL, 1);
+
+            await firstPage.GetDataOrInitializeAsync();
+
+            book.PageCount = (int)firstPage.TotalPageCount;
+
+            book.Pages = new List<Page<T>>(book.PageCount) { firstPage };
+
+            if (book.PageCount > 1)
             {
-                searchTerm = searchTerm.Trim('/') ?? null;
+                for (int i = 2; i <= book.PageCount; i++)
+                {
+                    book.Pages.Add(new Page<T>(book.BaseURL, i));
+                }
             }
 
-            if (!string.IsNullOrEmpty(extension) && !string.IsNullOrEmpty(searchTerm))
-            {
-                // Concatenate url & route extensions(s)
-                url = $"{url}/by-{extension}/{id}/?search={searchTerm}";
-            }
-            else if (!string.IsNullOrEmpty(extension))
-            {
-                // Concatenate url & route extensions(s)
-                url = $"{url}/by-{extension}/{id}";
-            }
-            else if (!string.IsNullOrEmpty(searchTerm))
-            {
-                // Concatenate url & route extensions(s)
-                url = $"{url}/?search={searchTerm}";
-            }
+            return book;
+        }
+
+        public static async Task<PaginatedCollection<T>> InstantiateSearch(string haystack, string needle)
+        {
+            RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
+
+            string url = routeAttribute.GetPaginatedSearchRoute(haystack, needle);
 
             PaginatedCollection<T> book = new PaginatedCollection<T>(url);
 
