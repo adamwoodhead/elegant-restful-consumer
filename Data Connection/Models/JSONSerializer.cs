@@ -1,6 +1,9 @@
 ﻿using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Serialization;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace DataConnection.Models
 {
@@ -10,7 +13,29 @@ namespace DataConnection.Models
 
         public string Serialize(Parameter parameter) => JsonConvert.SerializeObject(parameter.Value);
 
-        public T Deserialize<T>(IRestResponse response) => JsonConvert.DeserializeObject<T>(response.Content);
+        // public T Deserialize<T>(IRestResponse response) => JsonConvert.DeserializeObject<T>(response.Content);
+
+        public T Deserialize<T>(IRestResponse response)
+        {
+            try
+            {
+                return JsonConvert.DeserializeObject<T>(response.Content);
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    // Lets try wrapping it, we may have a singular whilst requesting a list.
+
+                    string wrappedContent = $"[{response.Content}]";
+                    return JsonConvert.DeserializeObject<T>(wrappedContent);
+                }
+                catch (Exception)
+                {
+                    return default;
+                }
+            }
+        }
 
         public string[] SupportedContentTypes { get; } =
         {

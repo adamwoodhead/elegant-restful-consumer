@@ -1,4 +1,5 @@
-﻿using RestSharp;
+﻿using Newtonsoft.Json;
+using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,22 +9,48 @@ using System.Threading.Tasks;
 
 namespace DataConnection.Models
 {
-    public abstract class Authenticatable<T> : SoftDeleteDataPacket<T>
+    [JsonObject]
+    public class Authenticatable
     {
+        [JsonProperty("id")]
+        public int? ID { get; set; }
+
+        [JsonProperty("created_at")]
+        public DateTime CreatedAt { get; set; }
+
+        [JsonProperty("updated_at")]
+        public DateTime UpdatedAt { get; set; }
+
+        [JsonIgnore]
         public AuthenticationPacket Authentication { get; set; }
 
-        public abstract string AuthenticateRoute { get; }
+        [JsonIgnore]
+        public static string AuthenticateRoute => "/authenticate";
 
-        public abstract string RefreshRoute { get; }
+        [JsonIgnore]
+        public static string RefreshRoute => "/refresh";
 
-        public abstract string LogoutRoute { get; }
+        [JsonIgnore]
+        public static string LogoutRoute => "/logout";
 
-        public abstract string Password { get; set; }
+        [JsonIgnore]
+        public static string CurrentUserRoute => "/me";
 
-        public async Task<bool> AuthenticateAsync(string password, CancellationToken cancellationToken = default)
+        [JsonProperty("email")]
+        public virtual string Email { get; set; }
+
+        [JsonProperty("password")]
+        public virtual string Password { get; set; }
+
+        public Authenticatable(string email, string password)
         {
-            string oldPassword = Password;
+            Email = email;
             Password = password;
+        }
+
+        public async Task<AuthenticationPacket> AuthenticateAsync(CancellationToken cancellationToken = default)
+        {
+            Console.WriteLine("Authenticating...");
 
             try
             {
@@ -31,21 +58,37 @@ namespace DataConnection.Models
 
                 RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
 
-                request.AddJsonBody(this);
+                request.AddJsonBody(new { email = this.Email, password = this.Password });
 
-                IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RequestAsync<AuthenticationPacket>(request, cancellationToken);
+                IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
+
+                return restResponse.Data;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        internal async Task RefreshAsync(CancellationToken cancellationToken = default)
+        {
+            Console.WriteLine("Refreshing Token...");
+
+            try
+            {
+                string url = $"{DataConnection.BaseURL}" + RefreshRoute;
+
+                RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+
+                request.AddHeader("Authorization", $"bearer {Authentication.AccessToken}");
+
+                IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
 
                 Authentication = restResponse.Data;
-
-                Password = oldPassword;
-
-                return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // return false;
-                Password = oldPassword;
-                throw ex;
+                Authentication = null;
             }
         }
     }

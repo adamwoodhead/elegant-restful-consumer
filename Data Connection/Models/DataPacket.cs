@@ -29,6 +29,15 @@ namespace DataConnection.Models
         [JsonProperty("updated_at")]
         public DateTime UpdatedAt { get; set; }
 
+        [JsonProperty("error")]
+        public string Error { get; set; }
+
+        [JsonProperty("message")]
+        public string ErrorMessage { get; set; }
+
+        [JsonProperty("errors")]
+        public List<string> Errors { get; set; }
+
         #region Pagination
 
         public static async Task<PaginatedCollection<T>> PaginateAsync()
