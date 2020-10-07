@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LogHandler;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -102,7 +103,7 @@ namespace DataConnection.Models
 
         public void Report<T>(string method, double elapsedMilliseconds)
         {
-            Console.WriteLine(
+            Log.Verbose(
                 $"[{method}] " +
                 $"<{typeof(T).GetFriendlyName()}>".PadRight((TypeRollingCounters.Keys.Select(x => x.Name).Max(x => x.Length) + 2)) + " : (ms)" +
                 $" {elapsedMilliseconds:0000} : {Min<T>():0000} : {Avg<T>():0000} : {Max<T>():0000} : ({Count<T>():00000})" +

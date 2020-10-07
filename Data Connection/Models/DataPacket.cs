@@ -17,6 +17,13 @@ using System.Threading.Tasks;
 
 namespace DataConnection.Models
 {
+    public interface IDataPacket
+    {
+        int? ID { get; set; }
+        DateTime CreatedAt { get; set; }
+        DateTime UpdatedAt { get; set; }
+    }
+
     [JsonObject]
     public class DataPacket<T> : IDataPacket
     {

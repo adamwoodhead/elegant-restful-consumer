@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using LogHandler;
+using Newtonsoft.Json;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -50,7 +51,7 @@ namespace DataConnection.Models
 
         public async Task<AuthenticationPacket> AuthenticateAsync(CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("Authenticating...");
+            Log.Verbose("Authenticating...");
 
             try
             {
@@ -72,23 +73,53 @@ namespace DataConnection.Models
 
         internal async Task RefreshAsync(CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("Refreshing Token...");
-
-            try
+            if (!string.IsNullOrEmpty(Authentication?.AccessToken))
             {
-                string url = $"{DataConnection.BaseURL}" + RefreshRoute;
+                Log.Verbose("Refreshing Token...");
 
-                RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+                try
+                {
+                    string url = $"{DataConnection.BaseURL}" + RefreshRoute;
 
-                request.AddHeader("Authorization", $"bearer {Authentication.AccessToken}");
+                    RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
 
-                IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
+                    request.AddHeader("Authorization", $"bearer {Authentication.AccessToken}");
 
-                Authentication = restResponse.Data;
+                    IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
+
+                    Authentication = restResponse.Data;
+
+                    Log.Verbose("Token Refreshed Successfully");
+                }
+                catch (Exception)
+                {
+                    Authentication = null;
+                }
             }
-            catch (Exception)
+        }
+
+        internal async Task LogoutAsync(CancellationToken cancellationToken = default)
+        {
+            if (!string.IsNullOrEmpty(Authentication?.AccessToken))
             {
-                Authentication = null;
+                Log.Verbose("Refreshing Token...");
+
+                try
+                {
+                    string url = $"{DataConnection.BaseURL}" + LogoutRoute;
+
+                    RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+
+                    request.AddHeader("Authorization", $"bearer {Authentication.AccessToken}");
+
+                    IRestResponse<IDataPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<IDataPacket>(request, cancellationToken);
+
+                    Authentication = null;
+                }
+                catch (Exception)
+                {
+                    Authentication = null;
+                }
             }
         }
     }

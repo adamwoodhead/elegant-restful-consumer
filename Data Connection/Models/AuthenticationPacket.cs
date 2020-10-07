@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using LogHandler;
+using Newtonsoft.Json;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -17,10 +18,36 @@ namespace DataConnection.Models
         [JsonProperty("token_type")]
         public string TypeType { get; set; }
 
+        [JsonProperty("expires_at")]
+        public int ExpiresAt { get; set; }
+
         [JsonProperty("expires_in")]
         public int ExpiresIn { get; set; }
 
+        [JsonIgnore]
+        public CancellationTokenSource CancellationTokenSource { get; private set; } = new CancellationTokenSource();
+
         public AuthenticationPacket() { }
+
+        public void BeginAutoRefreshAsync()
+        {
+            Task.Run(async () => {
+                Log.Verbose("Token Refresh Task Started");
+
+                while (DataConnection.CurrentUser?.Authentication?.Equals(this) ?? false)
+                {
+                    Log.Verbose($"Now: {DateTime.UtcNow}");
+                    Log.Verbose($"Expires At: {new DateTime() + TimeSpan.FromSeconds(ExpiresAt)}");
+                    Log.Verbose($"Refresh At: {new DateTime() + TimeSpan.FromSeconds(ExpiresAt - 30)}");
+                    Log.Verbose($"Expires In: {ExpiresIn}s");
+                    Log.Verbose($"Refresh In: {ExpiresIn - 30}s (30 seconds prior)");
+
+                    await Task.Delay((ExpiresIn - 30) * 1000, CancellationTokenSource.Token);
+                    Log.Verbose("Attempting Token Refresh");
+                    await DataConnection.CurrentUser?.RefreshAsync(CancellationTokenSource.Token);
+                }
+            });
+        }
 
         public async Task<Authenticatable> GetAuthenticatedUser(CancellationToken cancellationToken = default)
         {

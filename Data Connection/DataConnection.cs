@@ -1,4 +1,5 @@
 ﻿using DataConnection.Models;
+using LogHandler;
 using RestSharp;
 using RestSharp.Authenticators;
 using System;
@@ -25,13 +26,11 @@ namespace DataConnection
 
         internal static bool AutoAttemptLogin { get; set; }
 
-        internal static bool HasAttemptedRefresh { get; set; }
-
         internal static Authenticatable CurrentUser { get; set; }
 
         public static RollingCounterCollection RollingCounterCollection { get; set; }
 
-        public static void Initialize(string baseRoute, Func<AuthenticationPacket> authCallback, bool autoAttemptLoginRefreshes)
+        public static void Initialize(string baseRoute, Func<AuthenticationPacket> authCallback, bool autoAttemptLoginRefreshes = false)
         {
             if (!IsInitialized)
             {
@@ -61,7 +60,7 @@ namespace DataConnection
             stopwatch.Start();
 #endif
 
-            if (CurrentUser != null && !HasAttemptedRefresh)
+            if (CurrentUser != null)
             {
                 restRequest.AddHeader("Authorization", $"bearer {CurrentUser.Authentication.AccessToken}");
             }
@@ -72,32 +71,24 @@ namespace DataConnection
             {
                 if (restResponse.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    Console.WriteLine($"{restResponse.StatusCode} : {restResponse.Content}");
+                    CurrentUser = null;
 
-                    if (CurrentUser?.Authentication != null && AutoAttemptLogin && HasAttemptedRefresh == false)
+                    Log.Verbose($"{restResponse.StatusCode} : {restResponse.Content}");
+
+                    AuthenticationPacket authenticatedPacket = UnauthorizedCallBack.Invoke();
+
+                    if (!string.IsNullOrEmpty(authenticatedPacket.AccessToken))
                     {
-                        HasAttemptedRefresh = true;
-                        await CurrentUser.RefreshAsync();
-
-                        return await RequestAsync<T>(restRequest, cancellationToken);
+                        CurrentUser = await authenticatedPacket.GetAuthenticatedUser();
+                        CurrentUser.Authentication = authenticatedPacket;
+                        CurrentUser.Authentication.BeginAutoRefreshAsync();
                     }
-                    else
-                    {
-                        AuthenticationPacket authenticatedPacket = UnauthorizedCallBack.Invoke();
 
-                        if (authenticatedPacket != null)
-                        {
-                            CurrentUser = await authenticatedPacket.GetAuthenticatedUser();
-                            CurrentUser.Authentication = authenticatedPacket;
-                            HasAttemptedRefresh = false;
-                        }
-
-                        return await RequestAsync<T>(restRequest, cancellationToken);
-                    }
+                    return await RequestAsync<T>(restRequest, cancellationToken);
                 }
                 else
                 {
-                    Console.WriteLine($"{restResponse.StatusCode} : {restResponse.Content}");
+                    Log.Verbose($"{restResponse.StatusCode} : {restResponse.Content}");
                     throw new Exception($"{restResponse.StatusCode} : {restResponse.Content}");
                 }
             }

@@ -1,5 +1,7 @@
-﻿using System;
+﻿using DataConnection.Models;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace DataConnection
@@ -27,6 +29,11 @@ namespace DataConnection
             }
 
             return friendlyName;
+        }
+
+        public static bool HasErrors<T>(this List<DataPacket<T>> dataPacketList)
+        {
+            return !string.IsNullOrEmpty(dataPacketList.FirstOrDefault().Error) || dataPacketList.FirstOrDefault().Errors != null;
         }
     }
 }
