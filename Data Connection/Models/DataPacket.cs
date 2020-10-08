@@ -80,7 +80,7 @@ namespace DataConnection.Models
 
         #region Relations
 
-        public static async Task<G> GetRelatedModelAsync<G>(string relation, int? id)
+        public static async Task<G> GetRelatedModelAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -88,12 +88,12 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, default);
+            IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, cancellationToken);
 
             return restResponse.Data;
         }
 
-        public static async Task<G> PostRelatedModelAsync<G>(string relation, int? id, G obj)
+        public static async Task<G> PostRelatedModelAsync<G>(string relation, int? id, G obj, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -103,12 +103,12 @@ namespace DataConnection.Models
 
             request.AddJsonBody(obj);
 
-            IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, default);
+            IRestResponse<G> restResponse = await DataConnection.RequestAsync<G>(request, cancellationToken);
 
             return restResponse.Data;
         }
 
-        public static async Task<List<G>> GetRelatedModelListAsync<G>(string relation, int? id)
+        public static async Task<List<G>> GetRelatedModelListAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -116,7 +116,7 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<List<G>> restResponse = await DataConnection.RequestAsync<List<G>>(request, default);
+            IRestResponse<List<G>> restResponse = await DataConnection.RequestAsync<List<G>>(request, cancellationToken);
 
             return restResponse.Data;
         }
@@ -125,9 +125,9 @@ namespace DataConnection.Models
 
         #region GET
 
-        public static async Task<T> GetAsync(int? id) => await GetAsync((int)id);
+        public static async Task<T> GetAsync(int? id, CancellationToken cancellationToken = default) => await GetAsync((int)id, cancellationToken);
 
-        public static async Task<T> GetAsync(int id)
+        public static async Task<T> GetAsync(int id, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -135,12 +135,12 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<T> restResponse = await DataConnection.RequestAsync<T>(request, default);
+            IRestResponse<T> restResponse = await DataConnection.RequestAsync<T>(request, cancellationToken);
 
             return restResponse.Data;
         }
 
-        public static async Task<List<T>> GetAsync()
+        public static async Task<List<T>> GetAsync(CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -148,12 +148,12 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<List<T>> restResponse = await DataConnection.RequestAsync<List<T>>(request, default);
+            IRestResponse<List<T>> restResponse = await DataConnection.RequestAsync<List<T>>(request, cancellationToken);
 
             return restResponse.Data;
         }
 
-        public static async Task<List<T>> SearchAsync(string haystack, string needle)
+        public static async Task<List<T>> SearchAsync(string haystack, string needle, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -161,7 +161,7 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<List<T>> restResponse = await DataConnection.RequestAsync<List<T>>(request, default);
+            IRestResponse<List<T>> restResponse = await DataConnection.RequestAsync<List<T>>(request, cancellationToken);
 
             return restResponse.Data;
         }

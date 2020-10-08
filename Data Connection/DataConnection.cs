@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,8 @@ namespace DataConnection
 {
     public static class DataConnection
     {
+        private static Authenticatable currentUser;
+
         public static string BaseURL { get; private set; }
 
         private static bool IsInitialized { get; set; } = false;
@@ -24,13 +27,34 @@ namespace DataConnection
 
         public static Func<AuthenticationPacket> UnauthorizedCallBack { get; set; }
 
-        internal static bool AutoAttemptLogin { get; set; }
+        public static Func<bool> NotConnectedCallBack { get; set; }
 
-        internal static Authenticatable CurrentUser { get; set; }
+        public static event EventHandler CurrentUserChanged;
+
+        internal static bool AutoAttemptLogin { get; set; }
 
         public static RollingCounterCollection RollingCounterCollection { get; set; }
 
-        public static void Initialize(string baseRoute, Func<AuthenticationPacket> authCallback, bool autoAttemptLoginRefreshes = false)
+        public static DateTime? LoggedInAt { get; set; }
+
+        public static Authenticatable CurrentUser
+        {
+            get => currentUser;
+            internal set
+            {
+                currentUser = value;
+                LoggedInAt = DateTime.Now;
+
+                OnCurrentUserChanged(value);
+            }
+        }
+
+        private static void OnCurrentUserChanged(Authenticatable value)
+        {
+            CurrentUserChanged?.Invoke(value, null);
+        }
+
+        public static void Initialize(string baseRoute, Func<AuthenticationPacket> authCallback = null, Func<bool> notConnectedCallback = null, bool autoAttemptLoginRefreshes = false)
         {
             if (!IsInitialized)
             {
@@ -48,9 +72,49 @@ namespace DataConnection
                 RestClient.RemoteCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
                 RestClient.UseSerializer(() => new JSONSerializer());
                 UnauthorizedCallBack = authCallback;
+                NotConnectedCallBack = notConnectedCallback;
             }
 
             IsInitialized = true;
+        }
+
+        public static async Task<bool> AttemptForcedAuthentication()
+        {
+            AuthenticationPacket authenticatedPacket = UnauthorizedCallBack?.Invoke();
+
+            if (authenticatedPacket != null && !string.IsNullOrEmpty(authenticatedPacket.AccessToken))
+            {
+                if (CurrentUser == null)
+                {
+                    CurrentUser = await authenticatedPacket.GetAuthenticatedUser();
+                }
+
+                CurrentUser.Authentication = authenticatedPacket;
+                CurrentUser.Authentication.BeginAutoRefreshAsync();
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public static async Task AttemptLogout()
+        {
+            try
+            {
+                if (CurrentUser?.Authentication != null)
+                {
+                    CurrentUser?.Authentication?.CancellationTokenSource?.Cancel();
+
+                    await CurrentUser.LogoutAsync();
+
+                    CurrentUser = null;
+                }
+            }
+            catch (Exception)
+            {
+                CurrentUser = null;
+            }
         }
 
         public static async Task<IRestResponse<T>> RequestAsync<T>(RestRequest restRequest, CancellationToken cancellationToken = default)
@@ -69,19 +133,23 @@ namespace DataConnection
 
             if (!restResponse.IsSuccessful)
             {
-                if (restResponse.StatusCode == HttpStatusCode.Unauthorized)
+                if ((int)restResponse.StatusCode == 0)
                 {
+                    if (NotConnectedCallBack.Invoke())
+                    {
+                        return await RequestAsync<T>(restRequest, cancellationToken);
+                    }
+                }
+                else if (restResponse.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    CurrentUser?.Authentication?.CancellationTokenSource.Cancel();
                     CurrentUser = null;
 
                     Log.Verbose($"{restResponse.StatusCode} : {restResponse.Content}");
 
-                    AuthenticationPacket authenticatedPacket = UnauthorizedCallBack.Invoke();
-
-                    if (!string.IsNullOrEmpty(authenticatedPacket.AccessToken))
+                    if (await AttemptForcedAuthentication() == false)
                     {
-                        CurrentUser = await authenticatedPacket.GetAuthenticatedUser();
-                        CurrentUser.Authentication = authenticatedPacket;
-                        CurrentUser.Authentication.BeginAutoRefreshAsync();
+                        return null;
                     }
 
                     return await RequestAsync<T>(restRequest, cancellationToken);

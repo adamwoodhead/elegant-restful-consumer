@@ -42,9 +42,11 @@ namespace DataConnection.Models
                     Log.Verbose($"Expires In: {ExpiresIn}s");
                     Log.Verbose($"Refresh In: {ExpiresIn - 30}s (30 seconds prior)");
 
-                    await Task.Delay((ExpiresIn - 30) * 1000, CancellationTokenSource.Token);
+                    await Task.Delay((ExpiresIn - 30) * 1000, CancellationTokenSource?.Token ?? default);
+                    CancellationTokenSource?.Token.ThrowIfCancellationRequested();
+
                     Log.Verbose("Attempting Token Refresh");
-                    await DataConnection.CurrentUser?.RefreshAsync(CancellationTokenSource.Token);
+                    await DataConnection.CurrentUser?.RefreshAsync(CancellationTokenSource?.Token ?? default);
                 }
             });
         }

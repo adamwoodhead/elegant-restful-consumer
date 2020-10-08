@@ -37,6 +37,12 @@ namespace DataConnection.Models
         [JsonIgnore]
         public static string CurrentUserRoute => "/me";
 
+        [JsonProperty("first_name")]
+        public virtual string FirstName { get; set; }
+
+        [JsonProperty("last_name")]
+        public virtual string LastName { get; set; }
+
         [JsonProperty("email")]
         public virtual string Email { get; set; }
 
@@ -73,7 +79,7 @@ namespace DataConnection.Models
 
         internal async Task RefreshAsync(CancellationToken cancellationToken = default)
         {
-            if (!string.IsNullOrEmpty(Authentication?.AccessToken))
+            if (!string.IsNullOrEmpty(Authentication?.AccessToken) && !cancellationToken.IsCancellationRequested)
             {
                 Log.Verbose("Refreshing Token...");
 
@@ -83,13 +89,26 @@ namespace DataConnection.Models
 
                     RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
 
-                    request.AddHeader("Authorization", $"bearer {Authentication.AccessToken}");
+                    request.AddHeader("Authorization", $"bearer {Authentication?.AccessToken}");
 
                     IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
 
-                    Authentication = restResponse.Data;
+                    if (restResponse.IsSuccessful)
+                    {
+                        AuthenticationPacket tmp = restResponse.Data;
 
-                    Log.Verbose("Token Refreshed Successfully");
+                        Authentication.AccessToken = tmp.AccessToken;
+                        Authentication.ExpiresAt = tmp.ExpiresAt;
+                        Authentication.ExpiresIn = tmp.ExpiresIn;
+                        Authentication.TypeType = tmp.TypeType;
+
+                        Log.Verbose("Token Refreshed Successfully");
+                    }
+                    else
+                    {
+
+                        Log.Error("Token Refresh Unsuccessful");
+                    }
                 }
                 catch (Exception)
                 {
@@ -102,7 +121,7 @@ namespace DataConnection.Models
         {
             if (!string.IsNullOrEmpty(Authentication?.AccessToken))
             {
-                Log.Verbose("Refreshing Token...");
+                Log.Verbose("Logging Out...");
 
                 try
                 {
@@ -112,7 +131,12 @@ namespace DataConnection.Models
 
                     request.AddHeader("Authorization", $"bearer {Authentication.AccessToken}");
 
-                    IRestResponse<IDataPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<IDataPacket>(request, cancellationToken);
+                    IRestResponse restResponse = await DataConnection.RestClient.ExecuteAsync(request, cancellationToken);
+
+                    if (restResponse.IsSuccessful)
+                    {
+                        Log.Verbose("Token Sucessfully Invalidated");
+                    }
 
                     Authentication = null;
                 }
