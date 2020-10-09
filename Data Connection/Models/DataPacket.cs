@@ -20,8 +20,8 @@ namespace DataConnection.Models
     public interface IDataPacket
     {
         int? ID { get; set; }
-        DateTime CreatedAt { get; set; }
-        DateTime UpdatedAt { get; set; }
+        DateTime? CreatedAt { get; set; }
+        DateTime? UpdatedAt { get; set; }
     }
 
     [JsonObject]
@@ -31,10 +31,10 @@ namespace DataConnection.Models
         public int? ID { get; set; } = null;
 
         [JsonProperty("created_at")]
-        public DateTime CreatedAt { get; set; }
+        public DateTime? CreatedAt { get; set; }
 
         [JsonProperty("updated_at")]
-        public DateTime UpdatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
 
         [JsonProperty("error")]
         public string Error { get; set; }
