@@ -10,28 +10,28 @@ namespace DataConnection.Models
 
         public string GetIndexRoute()
         {
-            return $"{IndexRoute}/";
+            return $"{IndexRoute}";
         }
 
         public string GetPaginatedIndexRoute()
         {
-            return $"{IndexRoute}/?pagination=true";
+            return $"{IndexRoute}?pagination=true";
         }
 
         public string GetSingularRoute(int? id)
         {
-            return $"{IndexRoute}/{id}/";
+            return $"{IndexRoute}/{id}";
         }
 
         public string GetRelationshipRoute(int? id, string relative)
         {
             if (id != null)
             {
-                return $"{IndexRoute}/{id}/{relative}/";
+                return $"{IndexRoute}/{id}/{relative}";
             }
             else
             {
-                return $"{IndexRoute}/{relative}/";
+                return $"{IndexRoute}/{relative}";
             }
         }
 
@@ -39,11 +39,11 @@ namespace DataConnection.Models
         {
             if (id != null)
             {
-                return $"{IndexRoute}/{id}/{relative}/?pagination=true";
+                return $"{IndexRoute}/{id}/{relative}?pagination=true";
             }
             else
             {
-                return $"{IndexRoute}/{relative}/?pagination=true";
+                return $"{IndexRoute}/{relative}?pagination=true";
             }
         }
 
