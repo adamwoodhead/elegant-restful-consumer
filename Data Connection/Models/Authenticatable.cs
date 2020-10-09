@@ -71,8 +71,9 @@ namespace DataConnection.Models
 
                 return restResponse.Data;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Log.Exception(ex);
                 return null;
             }
         }
