@@ -37,8 +37,8 @@ namespace DataConnection.Models
                 while (DataConnection.CurrentUser?.Authentication?.Equals(this) ?? false)
                 {
                     Log.Verbose($"Now: {DateTime.UtcNow}");
-                    Log.Verbose($"Expires At: {new DateTime() + TimeSpan.FromSeconds(ExpiresAt)}");
-                    Log.Verbose($"Refresh At: {new DateTime() + TimeSpan.FromSeconds(ExpiresAt - 30)}");
+                    Log.Verbose($"Expires At: {Helper.UnixTimeStampToDateTime(ExpiresAt)}");
+                    Log.Verbose($"Refresh At: {Helper.UnixTimeStampToDateTime(ExpiresAt - 30)}");
                     Log.Verbose($"Expires In: {ExpiresIn}s");
                     Log.Verbose($"Refresh In: {ExpiresIn - 30}s (30 seconds prior)");
 
@@ -46,7 +46,16 @@ namespace DataConnection.Models
                     CancellationTokenSource?.Token.ThrowIfCancellationRequested();
 
                     Log.Verbose("Attempting Token Refresh");
-                    await DataConnection.CurrentUser?.RefreshAsync(CancellationTokenSource?.Token ?? default);
+                    try
+                    {
+                        DataConnection.IsRefreshing = true;
+                        await DataConnection.CurrentUser?.RefreshAsync(CancellationTokenSource?.Token ?? default);
+                        DataConnection.IsRefreshing = false;
+                    }
+                    catch (Exception)
+                    {
+                        DataConnection.IsRefreshing = false;
+                    }
                 }
             });
         }
