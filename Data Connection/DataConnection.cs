@@ -25,6 +25,8 @@ namespace DataConnection
 
         internal static RestClient RestClient { get; set; }
 
+        internal static bool IsRefreshing { private get; set; }
+
         public static Func<AuthenticationPacket> UnauthorizedCallBack { get; set; }
 
         public static Func<bool> NotConnectedCallBack { get; set; }
@@ -43,7 +45,7 @@ namespace DataConnection
             internal set
             {
                 currentUser = value;
-                LoggedInAt = DateTime.Now;
+                LoggedInAt = DateTime.UtcNow;
 
                 OnCurrentUserChanged(value);
             }
@@ -123,6 +125,15 @@ namespace DataConnection
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 #endif
+            if (IsRefreshing)
+            {
+                Log.Warning("Currently refreshing token! Waiting...");
+
+                while (IsRefreshing)
+                {
+                    await Task.Delay(10);
+                }
+            }
 
             if (CurrentUser != null)
             {
@@ -137,11 +148,28 @@ namespace DataConnection
                 {
                     if (NotConnectedCallBack.Invoke())
                     {
-                        return await RequestAsync<T>(restRequest, cancellationToken);
+                        RestRequest replicatedRequest = new RestRequest($"{BaseURL}{restRequest.Resource}", restRequest.Method, restRequest.RequestFormat);
+                        return await RequestAsync<T>(replicatedRequest, cancellationToken);
                     }
                 }
                 else if (restResponse.StatusCode == HttpStatusCode.Unauthorized)
                 {
+                    RestRequest replicatedRequest = new RestRequest($"{BaseURL}{restRequest.Resource}", restRequest.Method, restRequest.RequestFormat);
+
+                    if (IsRefreshing)
+                    {
+                        Log.Warning("We sent this request whilst refreshing our token! Waiting...");
+
+                        while (IsRefreshing)
+                        {
+                            await Task.Delay(10);
+                        }
+
+                        Log.Verbose("Finished Refresh Task, lets try again!");
+
+                        return await RequestAsync<T>(replicatedRequest, cancellationToken);
+                    }
+
                     CurrentUser?.Authentication?.CancellationTokenSource.Cancel();
                     CurrentUser = null;
 
@@ -152,7 +180,7 @@ namespace DataConnection
                         return null;
                     }
 
-                    return await RequestAsync<T>(restRequest, cancellationToken);
+                    return await RequestAsync<T>(replicatedRequest, cancellationToken);
                 }
                 else
                 {
