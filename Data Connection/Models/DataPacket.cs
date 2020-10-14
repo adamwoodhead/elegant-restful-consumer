@@ -47,22 +47,22 @@ namespace DataConnection.Models
 
         #region Pagination
 
-        public static async Task<PaginatedCollection<T>> PaginateAsync()
+        public static async Task<PaginatedCollection<T>> PaginateAsync(CancellationToken cancellationToken = default)
         {
-            return await PaginatedCollection<T>.InstantiateIndex();
+            return await PaginatedCollection<T>.InstantiateIndex(cancellationToken);
         }
 
-        public static async Task<PaginatedCollection<T>> PaginateRelativeAsync(string extension, int? id = null)
+        public static async Task<PaginatedCollection<T>> PaginateRelativeAsync(string extension, int? id = null, CancellationToken cancellationToken = default)
         {
-            return await PaginatedCollection<T>.InstantiateExtension(id, extension);
+            return await PaginatedCollection<T>.InstantiateExtension(id, extension, cancellationToken);
         }
 
-        public static async Task<PaginatedCollection<T>> PaginateSearchAsync(string haystack, string needle)
+        public static async Task<PaginatedCollection<T>> PaginateSearchAsync(string haystack, string needle, CancellationToken cancellationToken = default)
         {
-            return await PaginatedCollection<T>.InstantiateSearch(haystack, needle);
+            return await PaginatedCollection<T>.InstantiateSearch(haystack, needle, cancellationToken);
         }
 
-        public static async Task<PaginatedCollection<G>> GetRelatedModelPaginationAsync<G>(string relation, int? id)
+        public static async Task<PaginatedCollection<G>> GetRelatedModelPaginationAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -70,7 +70,7 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
 
-            IRestResponse<PaginatedCollection<G>> restResponse = await DataConnection.RequestAsync<PaginatedCollection<G>>(request, default);
+            IRestResponse<PaginatedCollection<G>> restResponse = await DataConnection.RequestAsync<PaginatedCollection<G>>(request, cancellationToken);
 
             return restResponse.Data;
         }
@@ -169,7 +169,7 @@ namespace DataConnection.Models
         #endregion
 
         #region POST
-        public async Task<G> PostRelatedAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
+        public virtual async Task<G> PostRelatedAsync<G>(string relation, int? id, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -184,7 +184,7 @@ namespace DataConnection.Models
             return restResponse.Data;
         }
 
-        public async Task<T> CreateAsync(CancellationToken cancellationToken = default)
+        public virtual async Task<T> CreateAsync(CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = this.GetType().GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -206,7 +206,7 @@ namespace DataConnection.Models
 
         #region UPDATE
 
-        public async Task<T> UpdateAsync(CancellationToken cancellationToken = default)
+        public virtual async Task<T> UpdateAsync(CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = this.GetType().GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -227,7 +227,7 @@ namespace DataConnection.Models
 
         #region DELETE
 
-        public async Task<bool> DeleteAsync(CancellationToken cancellationToken = default)
+        public virtual async Task<bool> DeleteAsync(CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = this.GetType().GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
