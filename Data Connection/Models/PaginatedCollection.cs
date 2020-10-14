@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DataConnection.Models
@@ -20,7 +21,8 @@ namespace DataConnection.Models
             BaseURL = url;
         }
 
-        public static async Task<PaginatedCollection<T>> InstantiateIndex()
+        // TODO Setup Cancellation Token
+        public static async Task<PaginatedCollection<T>> InstantiateIndex(CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -47,7 +49,8 @@ namespace DataConnection.Models
             return book;
         }
 
-        public static async Task<PaginatedCollection<T>> InstantiateExtension(int? id, string extension)
+        // TODO Setup Cancellation Token
+        public static async Task<PaginatedCollection<T>> InstantiateExtension(int? id, string extension, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
@@ -74,7 +77,8 @@ namespace DataConnection.Models
             return book;
         }
 
-        public static async Task<PaginatedCollection<T>> InstantiateSearch(string haystack, string needle)
+        // TODO Setup Cancellation Token
+        public static async Task<PaginatedCollection<T>> InstantiateSearch(string haystack, string needle, CancellationToken cancellationToken = default)
         {
             RouteAttribute routeAttribute = typeof(T).GetCustomAttributes(false).FirstOrDefault(x => x.GetType() == typeof(RouteAttribute)) as RouteAttribute;
 
