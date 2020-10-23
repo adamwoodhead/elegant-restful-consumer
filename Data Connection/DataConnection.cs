@@ -182,6 +182,10 @@ namespace DataConnection
 
                     return await RequestAsync<T>(replicatedRequest, cancellationToken);
                 }
+                else if (restResponse.StatusCode == HttpStatusCode.NotFound)
+                {
+                    return default;
+                }
                 else
                 {
                     Log.Verbose($"{restResponse.StatusCode} : {restResponse.Content}");
