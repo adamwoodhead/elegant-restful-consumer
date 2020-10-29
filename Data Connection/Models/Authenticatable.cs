@@ -69,6 +69,12 @@ namespace DataConnection.Models
 
                 IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
 
+                if ((int)restResponse.StatusCode == 0)
+                {
+                    DataConnection.NotConnectedCallBack?.Invoke();
+                    return null;
+                }
+
                 return restResponse.Data;
             }
             catch (Exception ex)
