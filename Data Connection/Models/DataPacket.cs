@@ -36,6 +36,12 @@ namespace DataConnection.Models
         [JsonProperty("updated_at")]
         public DateTime? UpdatedAt { get; set; }
 
+        [JsonProperty("created_by")]
+        public int? CreatedBy { get; set; }
+
+        [JsonProperty("updated_by")]
+        public int? UpdatedBy { get; set; }
+
         [JsonProperty("error")]
         public string Error { get; set; }
 

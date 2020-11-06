@@ -16,5 +16,9 @@ namespace DataConnection.Models
     {
         [JsonProperty("deleted_at")]
         public DateTime? DeletedAt { get; set; } = null;
+
+
+        [JsonProperty("deleted_by")]
+        public int? DeletedBy { get; set; } = null;
     }
 }

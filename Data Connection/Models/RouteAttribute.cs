@@ -49,12 +49,12 @@ namespace DataConnection.Models
 
         public string GetSearchRoute(string haystackField, string needleValue)
         {
-            return $"{IndexRoute}/?search={needleValue}&in={haystackField}";
+            return $"{IndexRoute}?search={needleValue}&in={haystackField}";
         }
 
         public string GetPaginatedSearchRoute(string haystackField, string needleValue)
         {
-            return $"{IndexRoute}/?search={needleValue}&in={haystackField}&pagination=true";
+            return $"{IndexRoute}?search={needleValue}&in={haystackField}&pagination=true";
         }
 
         public RouteAttribute(string baseRoute)
