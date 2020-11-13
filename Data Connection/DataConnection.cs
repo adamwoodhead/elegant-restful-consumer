@@ -135,7 +135,7 @@ namespace DataConnection
                 }
             }
 
-            if (CurrentUser != null)
+            if (CurrentUser?.Authentication != null)
             {
                 restRequest.AddHeader("Authorization", $"bearer {CurrentUser.Authentication.AccessToken}");
             }
