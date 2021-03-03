@@ -62,7 +62,7 @@ namespace DataConnection.Models
 
         public async Task<Authenticatable> GetAuthenticatedUser(CancellationToken cancellationToken = default)
         {
-            string url = $"{DataConnection.BaseURL}/me";
+            string url = $"{DataConnection.BaseURL}{Authenticatable.UserProfileRoute}";
 
             RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
 

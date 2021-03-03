@@ -26,7 +26,7 @@ namespace DataConnection.Models
         public AuthenticationPacket Authentication { get; set; }
 
         [JsonIgnore]
-        public static string AuthenticateRoute => "/authenticate";
+        public static string AuthenticateRoute => "/login";
 
         [JsonIgnore]
         public static string RefreshRoute => "/refresh";
@@ -35,7 +35,7 @@ namespace DataConnection.Models
         public static string LogoutRoute => "/logout";
 
         [JsonIgnore]
-        public static string CurrentUserRoute => "/me";
+        public static string UserProfileRoute => "/user-profile";
 
         [JsonProperty("first_name")]
         public virtual string FirstName { get; set; }
