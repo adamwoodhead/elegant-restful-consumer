@@ -8,14 +8,13 @@ namespace DataConnection.Models
 {
     public class RollingCounterCollection
     {
-        internal Dictionary<Type, RollingCounter> TypeRollingCounters { get; private set; }
+        internal Dictionary<Type, RollingCounter> TypeRollingCounters { get; private set; } = new Dictionary<Type, RollingCounter>();
 
         private int CollectionLimit { get; }
 
         public RollingCounterCollection(int limit)
         {
             CollectionLimit = limit;
-            TypeRollingCounters = new Dictionary<Type, RollingCounter>();
         }
 
         public void Slip<T>(double val)
@@ -103,11 +102,18 @@ namespace DataConnection.Models
 
         public void Report<T>(string method, double elapsedMilliseconds)
         {
-            Log.Verbose(
+            try
+            {
+                Log.Verbose(
                 $"[{method}] " +
-                $"<{typeof(T).GetFriendlyName()}>".PadRight((TypeRollingCounters.Keys.Select(x => x.Name).Max(x => x.Length) + 2)) + " : (ms)" +
-                $" {elapsedMilliseconds:0000} : {Min<T>():0000} : {Avg<T>():0000} : {Max<T>():0000} : ({Count<T>():00000})" +
+                $"<{typeof(T).GetFriendlyName()}>".PadRight(TypeRollingCounters.Keys.Select(x => x.Name).Max(x => x.Length) + 2) + " : (ms)" +
+                $" {elapsedMilliseconds:0000}" +
                 $" : ({Slipped<T>():00000}) : ({SlippedTotal():000000})");
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
     }
 }

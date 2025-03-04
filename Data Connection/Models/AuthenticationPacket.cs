@@ -64,11 +64,11 @@ namespace DataConnection.Models
         {
             string url = $"{DataConnection.BaseURL}{Authenticatable.UserProfileRoute}";
 
-            RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+            RestRequest request = new RestRequest(url, Method.Post);
 
             request.AddHeader("Authorization", $"bearer {AccessToken}");
 
-            IRestResponse<Authenticatable> restResponse = await DataConnection.RestClient.ExecuteAsync<Authenticatable>(request, cancellationToken);
+            RestResponse<Authenticatable> restResponse = await DataConnection.RestClient.ExecuteAsync<Authenticatable>(request, cancellationToken);
 
             return restResponse.Data;
         }

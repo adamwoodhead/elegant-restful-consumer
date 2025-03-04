@@ -144,20 +144,20 @@ namespace DataConnection.Models
             {
                 string url = NonPaginatedURL.Contains("?") ? $"{NonPaginatedURL}&page={CurrentPage}" : $"{NonPaginatedURL}?page={CurrentPage}";
 
-                RestRequest request = new RestRequest(url, Method.GET, DataFormat.Json);
+                RestRequest request = new RestRequest(url, Method.Get);
 
-                IRestResponse<Page<T>> restResponse = await DataConnection.RequestAsync<Page<T>>(request);
+                Page<T> page = await DataConnection.RequestAsync<Page<T>>(request);
 
-                totalItems = restResponse.Data.totalItems;
-                itemsPerPage = restResponse.Data.itemsPerPage;
-                itemFrom = restResponse.Data.itemFrom;
-                itemTo = restResponse.Data.itemTo;
-                firstPageURL = restResponse.Data.firstPageURL;
-                totalPageCount = restResponse.Data.totalPageCount;
-                lastPageURL = restResponse.Data.lastPageURL;
-                previousPageURL = restResponse.Data.previousPageURL;
-                nextPageURL = restResponse.Data.nextPageURL;
-                data = restResponse.Data.Data;
+                totalItems = page.totalItems;
+                itemsPerPage = page.itemsPerPage;
+                itemFrom = page.itemFrom;
+                itemTo = page.itemTo;
+                firstPageURL = page.firstPageURL;
+                totalPageCount = page.totalPageCount;
+                lastPageURL = page.lastPageURL;
+                previousPageURL = page.previousPageURL;
+                nextPageURL = page.nextPageURL;
+                data = page.Data;
 
                 IsInitialized = true;
             }

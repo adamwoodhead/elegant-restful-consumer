@@ -63,11 +63,13 @@ namespace DataConnection.Models
             {
                 string url = $"{DataConnection.BaseURL}" + AuthenticateRoute;
 
-                RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+                RestRequest request = new RestRequest(url, Method.Post);
 
-                request.AddJsonBody(new { email = this.Email, password = this.Password });
+                request.AddJsonBody(this);
 
-                IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
+                RestResponse restResponse = await DataConnection.RestClient.ExecuteAsync(request, cancellationToken);
+
+                AuthenticationPacket authenticationPacket = JsonConvert.DeserializeObject<AuthenticationPacket>(restResponse.Content);
 
                 if ((int)restResponse.StatusCode == 0)
                 {
@@ -75,7 +77,7 @@ namespace DataConnection.Models
                     return null;
                 }
 
-                return restResponse.Data;
+                return authenticationPacket;
             }
             catch (Exception ex)
             {
@@ -94,11 +96,11 @@ namespace DataConnection.Models
                 {
                     string url = $"{DataConnection.BaseURL}" + RefreshRoute;
 
-                    RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+                    RestRequest request = new RestRequest(url, Method.Post);
 
                     request.AddHeader("Authorization", $"bearer {Authentication?.AccessToken}");
 
-                    IRestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
+                    RestResponse<AuthenticationPacket> restResponse = await DataConnection.RestClient.ExecuteAsync<AuthenticationPacket>(request, cancellationToken);
 
                     if (restResponse.IsSuccessful)
                     {
@@ -134,11 +136,11 @@ namespace DataConnection.Models
                 {
                     string url = $"{DataConnection.BaseURL}" + LogoutRoute;
 
-                    RestRequest request = new RestRequest(url, Method.POST, DataFormat.Json);
+                    RestRequest request = new RestRequest(url, Method.Post);
 
                     request.AddHeader("Authorization", $"bearer {Authentication.AccessToken}");
 
-                    IRestResponse restResponse = await DataConnection.RestClient.ExecuteAsync(request, cancellationToken);
+                    RestResponse restResponse = await DataConnection.RestClient.ExecuteAsync(request, cancellationToken);
 
                     if (restResponse.IsSuccessful)
                     {

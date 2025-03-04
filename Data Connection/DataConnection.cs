@@ -1,17 +1,21 @@
 ﻿using DataConnection.Models;
 using LogHandler;
+using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Authenticators;
+using RestSharp.Serializers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using ContentType = RestSharp.ContentType;
 
 namespace DataConnection
 {
@@ -56,23 +60,42 @@ namespace DataConnection
             CurrentUserChanged?.Invoke(value, null);
         }
 
+        private static RestClientOptions RestOptions()
+        {
+            RestClientOptions restClientOptions = new RestClientOptions()
+            {
+                Proxy = null,
+                ThrowOnAnyError = true
+            };
+
+            restClientOptions.RemoteCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
+
+            return restClientOptions;
+        }
+
+        private static SerializerConfig RestSerializerConfig()
+        {
+            SerializerConfig serializerConfig = new SerializerConfig();
+            serializerConfig.UseSerializer(() => new JSONSerializer());
+
+            return serializerConfig;
+        }
+
         public static void Initialize(string baseRoute, Func<AuthenticationPacket> authCallback = null, Func<bool> notConnectedCallback = null, bool autoAttemptLoginRefreshes = false)
         {
             if (!IsInitialized)
             {
                 AutoAttemptLogin = autoAttemptLoginRefreshes;
-                System.Net.WebRequest.DefaultWebProxy = null;
+                WebRequest.DefaultWebProxy = null;
                 ServicePointManager.UseNagleAlgorithm = false;
                 RollingCounterCollection = new RollingCounterCollection(1000);
 
-                BaseURL = baseRoute;
-                RestClient = new RestClient(BaseURL)
-                {
-                    Proxy = null,
-                    ThrowOnAnyError = true
-                };
-                RestClient.RemoteCertificateValidationCallback += (sender, certificate, chain, sslPolicyErrors) => true;
-                RestClient.UseSerializer(() => new JSONSerializer());
+                
+                ConfigureRestClient configureRestClient = new ConfigureRestClient(x => RestOptions());
+                ConfigureSerialization configureSerialization = new ConfigureSerialization(x => RestSerializerConfig());
+
+                RestClient = new RestClient(baseRoute, configureRestClient, null, configureSerialization);
+
                 UnauthorizedCallBack = authCallback;
                 NotConnectedCallBack = notConnectedCallback;
             }
@@ -119,7 +142,7 @@ namespace DataConnection
             }
         }
 
-        public static async Task<IRestResponse<T>> RequestAsync<T>(RestRequest restRequest, CancellationToken cancellationToken = default)
+        public static async Task<T> RequestAsync<T>(RestRequest restRequest, CancellationToken cancellationToken = default)
         {
 #if DEBUG
             Stopwatch stopwatch = new Stopwatch();
@@ -140,7 +163,13 @@ namespace DataConnection
                 restRequest.AddHeader("Authorization", $"bearer {CurrentUser.Authentication.AccessToken}");
             }
 
-            IRestResponse<T> restResponse = await RestClient.ExecuteAsync<T>(restRequest, cancellationToken);
+            Log.Verbose("Starting Request");
+
+            //IRestResponse<T> restResponse = await RestClient.ExecuteAsync<T>(restRequest, cancellationToken);
+
+            RestResponse restResponse = await RestClient.ExecuteAsync(restRequest, cancellationToken);
+
+            Log.Verbose("Ending Request");
 
             if (!restResponse.IsSuccessful)
             {
@@ -148,13 +177,42 @@ namespace DataConnection
                 {
                     if (NotConnectedCallBack.Invoke())
                     {
-                        RestRequest replicatedRequest = new RestRequest($"{BaseURL}{restRequest.Resource}", restRequest.Method, restRequest.RequestFormat);
+                        RestRequest replicatedRequest = new RestRequest { Resource = restRequest.Resource, Method = restRequest.Method, RequestFormat = restRequest.RequestFormat };
+                        replicatedRequest.AddBody(restRequest.Parameters.Where(x => x.ContentType == ContentType.Json).First().Value);
+
+                        if (restRequest.Files.Count > 0)
+                        {
+                            restRequest.Files.ToList().ForEach(x => replicatedRequest.AddFile(x.Name, x.FileName));
+                        }
+
                         return await RequestAsync<T>(replicatedRequest, cancellationToken);
                     }
                 }
+                else if((int)restResponse.StatusCode == 429 )
+                {
+                    Log.Warning($"We've just received a 429 error (Too Many Requests), waiting 10 seconds.");
+
+                    await Task.Delay(10000);
+
+                    RestRequest replicatedRequest = new RestRequest { Resource = restRequest.Resource, Method = restRequest.Method, RequestFormat = restRequest.RequestFormat };
+                    replicatedRequest.AddBody(restRequest.Parameters.Where(x => x.ContentType == ContentType.Json).First().Value);
+
+                    if (restRequest.Files.Count > 0)
+                    {
+                        restRequest.Files.ToList().ForEach(x => replicatedRequest.AddFile(x.Name, x.FileName));
+                    }
+
+                    return await RequestAsync<T>(replicatedRequest, cancellationToken);
+                }
                 else if (restResponse.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    RestRequest replicatedRequest = new RestRequest($"{BaseURL}{restRequest.Resource}", restRequest.Method, restRequest.RequestFormat);
+                    RestRequest replicatedRequest = new RestRequest { Resource = restRequest.Resource, Method = restRequest.Method, RequestFormat = restRequest.RequestFormat };
+                    replicatedRequest.AddBody(restRequest.Parameters.Where(x => x.ContentType == ContentType.Json).First().Value);
+
+                    if (restRequest.Files.Count > 0)
+                    {
+                        restRequest.Files.ToList().ForEach(x => replicatedRequest.AddFile(x.Name, x.FileName));
+                    }
 
                     if (IsRefreshing)
                     {
@@ -177,7 +235,7 @@ namespace DataConnection
 
                     if (await AttemptForcedAuthentication() == false)
                     {
-                        return null;
+                        return default;
                     }
 
                     return await RequestAsync<T>(replicatedRequest, cancellationToken);
@@ -188,10 +246,15 @@ namespace DataConnection
                 }
                 else
                 {
-                    Log.Verbose($"{restResponse.StatusCode} : {restResponse.Content}");
-                    throw new Exception($"{restResponse.StatusCode} : {restResponse.Content}");
+                    Log.Verbose($"{restRequest.Resource} | {restResponse.StatusCode} | {restResponse.Content}");
+                    throw new Exception($"{restRequest.Resource} | {restResponse.StatusCode} | {restResponse.Content}");
                 }
             }
+
+
+            Log.Verbose("Starting Deserialization");
+
+            T dataObject = JsonConvert.DeserializeObject<T>(restResponse.Content);
 
 #if DEBUG
             stopwatch.Stop();
@@ -199,7 +262,7 @@ namespace DataConnection
             RollingCounterCollection.Report<T>(restRequest.Method.ToString(), stopwatch.Elapsed.TotalMilliseconds);
 #endif
 
-            return restResponse;
+            return dataObject;
         }
     }
 }

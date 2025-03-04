@@ -1,13 +1,14 @@
 ﻿using Newtonsoft.Json;
 using RestSharp;
-using RestSharp.Serialization;
+using RestSharp.Serializers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace DataConnection.Models
 {
-    internal class JSONSerializer : IRestSerializer
+    internal class JSONSerializer : IRestSerializer, ISerializer, IDeserializer
     {
         public string Serialize(object obj) => JsonConvert.SerializeObject(obj);
 
@@ -15,7 +16,7 @@ namespace DataConnection.Models
 
         // public T Deserialize<T>(IRestResponse response) => JsonConvert.DeserializeObject<T>(response.Content);
 
-        public T Deserialize<T>(IRestResponse response)
+        public T? Deserialize<T>(RestResponse response)
         {
             try
             {
@@ -37,13 +38,26 @@ namespace DataConnection.Models
             }
         }
 
-        public string[] SupportedContentTypes { get; } =
-        {
-            "application/json", "text/json", "text/x-json", "text/javascript", "*+json"
-        };
-
-        public string ContentType { get; set; } = "application/json";
+        public ContentType ContentType { get; set; } = ContentType.Json;
 
         public DataFormat DataFormat { get; } = DataFormat.Json;
+
+        // new
+
+        public ISerializer Serializer => new JSONSerializer();
+
+        public IDeserializer Deserializer => new JSONSerializer();
+
+        public string[] AcceptedContentTypes { get; } =
+        {
+            "application/json", "text/json", "text/x-json", "*+json"
+        };
+
+        public SupportsContentType SupportsContentType => contentType => GetContentType(contentType);
+
+        static bool GetContentType(ContentType contentType)
+        {
+            return contentType == ContentType.Json;
+        }
     }
 }
