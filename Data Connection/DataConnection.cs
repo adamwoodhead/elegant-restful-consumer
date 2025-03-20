@@ -4,6 +4,8 @@ using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Authenticators;
 using RestSharp.Serializers;
+using RestSharp.Serializers.NewtonsoftJson;
+using RestSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,6 +18,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using ContentType = RestSharp.ContentType;
+using System.Text.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace DataConnection
 {
@@ -76,7 +80,18 @@ namespace DataConnection
         private static SerializerConfig RestSerializerConfig()
         {
             SerializerConfig serializerConfig = new SerializerConfig();
-            serializerConfig.UseSerializer(() => new JSONSerializer());
+            serializerConfig.UseOnlySerializer(() => new JSONSerializer());
+
+            //DefaultContractResolver contractResolver = new DefaultContractResolver
+            //{
+            //    NamingStrategy = new SnakeCaseNamingStrategy()
+            //};
+
+            //serializerConfig.UseNewtonsoftJson(new JsonSerializerSettings()
+            //{
+            //    ContractResolver = contractResolver,
+            //    Formatting = Formatting.Indented
+            //});
 
             return serializerConfig;
         }
@@ -163,13 +178,11 @@ namespace DataConnection
                 restRequest.AddHeader("Authorization", $"bearer {CurrentUser.Authentication.AccessToken}");
             }
 
-            Log.Verbose("Starting Request");
-
             //IRestResponse<T> restResponse = await RestClient.ExecuteAsync<T>(restRequest, cancellationToken);
 
-            RestResponse restResponse = await RestClient.ExecuteAsync(restRequest, cancellationToken);
+            Debug.WriteLine(restRequest.Resource);
 
-            Log.Verbose("Ending Request");
+            RestResponse restResponse = await RestClient.ExecuteAsync(restRequest, cancellationToken);
 
             if (!restResponse.IsSuccessful)
             {

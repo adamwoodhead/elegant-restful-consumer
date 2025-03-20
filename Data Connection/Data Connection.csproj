@@ -11,12 +11,11 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="RestSharp" Version="112.1.0" />
+    <PackageReference Include="RestSharp.Serializers.NewtonsoftJson" Version="112.1.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Log Handler">
-      <HintPath>..\..\log-handler\LogHandler\bin\Release\netstandard2.0\Log Handler.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\log-handler\LogHandler\Log Handler.csproj" />
   </ItemGroup>
 
 </Project>

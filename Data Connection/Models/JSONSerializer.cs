@@ -10,26 +10,34 @@ namespace DataConnection.Models
 {
     internal class JSONSerializer : IRestSerializer, ISerializer, IDeserializer
     {
-        public string Serialize(object obj) => JsonConvert.SerializeObject(obj);
+        private readonly JsonSerializerSettings settings;
 
-        public string Serialize(Parameter parameter) => JsonConvert.SerializeObject(parameter.Value);
+        public JSONSerializer()
+        {
+            settings = new JsonSerializerSettings
+            {
+                // Configure settings as needed (e.g., snake_case, null handling)
+                // By default, Newtonsoft.Json respects JsonProperty attributes
+            };
+        }
 
-        // public T Deserialize<T>(IRestResponse response) => JsonConvert.DeserializeObject<T>(response.Content);
+        public string Serialize(object obj) => JsonConvert.SerializeObject(obj, settings);
 
+        public string Serialize(Parameter parameter) => JsonConvert.SerializeObject(parameter.Value, settings);
+
+#nullable enable
         public T? Deserialize<T>(RestResponse response)
         {
             try
             {
-                return JsonConvert.DeserializeObject<T>(response.Content);
+                return JsonConvert.DeserializeObject<T>(response.Content, settings);
             }
             catch (Exception)
             {
                 try
                 {
-                    // Lets try wrapping it, we may have a singular whilst requesting a list.
-
                     string wrappedContent = $"[{response.Content}]";
-                    return JsonConvert.DeserializeObject<T>(wrappedContent);
+                    return JsonConvert.DeserializeObject<T>(wrappedContent, settings);
                 }
                 catch (Exception)
                 {
@@ -37,12 +45,11 @@ namespace DataConnection.Models
                 }
             }
         }
+#nullable disable
 
         public ContentType ContentType { get; set; } = ContentType.Json;
 
         public DataFormat DataFormat { get; } = DataFormat.Json;
-
-        // new
 
         public ISerializer Serializer => new JSONSerializer();
 
