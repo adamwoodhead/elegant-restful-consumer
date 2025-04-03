@@ -170,7 +170,7 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest{ Resource = url, Method = Method.Post, RequestFormat = DataFormat.Json };
 
-            request.AddJsonBody(this);
+            request.AddJsonBody(JsonConvert.SerializeObject(this));
 
             return await DataConnection.RequestAsync<G>(request, cancellationToken);
         }
@@ -206,7 +206,7 @@ namespace DataConnection.Models
 
             RestRequest request = new RestRequest{ Resource = url, Method = Method.Put, RequestFormat = DataFormat.Json };
 
-            request.AddJsonBody(this);
+            request.AddJsonBody(JsonConvert.SerializeObject(this));
 
             var data = await DataConnection.RequestAsync<T>(request, cancellationToken);
 

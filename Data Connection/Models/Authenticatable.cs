@@ -65,7 +65,7 @@ namespace DataConnection.Models
 
                 RestRequest request = new RestRequest(url, Method.Post);
 
-                request.AddJsonBody(this);
+                request.AddJsonBody(JsonConvert.SerializeObject(this));
 
                 RestResponse restResponse = await DataConnection.RestClient.ExecuteAsync(request, cancellationToken);
 
