@@ -102,6 +102,8 @@ namespace DataConnection
 
         public static void Initialize(string baseRoute, Func<AuthenticationPacket> authCallback = null, Func<bool> notConnectedCallback = null, bool autoAttemptLoginRefreshes = false)
         {
+            BaseURL = baseRoute;
+
             if (!IsInitialized)
             {
                 AutoAttemptLogin = autoAttemptLoginRefreshes;
@@ -269,11 +271,29 @@ namespace DataConnection
                 RequestFormat = restRequest.RequestFormat
             };
 
-            var jsonBody = restRequest.Parameters.FirstOrDefault(x => x.ContentType == ContentType.Json);
-
-            if (jsonBody?.Value != null)
+            foreach (var parameter in restRequest.Parameters)
             {
-                replicatedRequest.AddStringBody(jsonBody.Value.ToString(), ContentType.Json);
+                if (parameter.Type == ParameterType.HttpHeader &&
+                    string.Equals(parameter.Name, "Authorization", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (parameter.Type == ParameterType.RequestBody)
+                {
+                    replicatedRequest.AddParameter(parameter);
+                    continue;
+                }
+
+                var clonedParameter = Parameter.CreateParameter(
+                    parameter.Name,
+                    parameter.Value,
+                    parameter.Type,
+                    parameter.Encode);
+
+                clonedParameter.ContentType = parameter.ContentType;
+
+                replicatedRequest.AddParameter(clonedParameter);
             }
 
             if (restRequest.Files.Count > 0)
