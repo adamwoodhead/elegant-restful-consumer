@@ -69,11 +69,13 @@ namespace DataConnection.Models
 
                 RestResponse restResponse = await DataConnection.RestClient.ExecuteAsync(request, cancellationToken);
 
-                AuthenticationPacket authenticationPacket = JsonConvert.DeserializeObject<AuthenticationPacket>(restResponse.Content);
+                AuthenticationPacket authenticationPacket = string.IsNullOrWhiteSpace(restResponse.Content)
+                    ? null
+                    : JsonConvert.DeserializeObject<AuthenticationPacket>(restResponse.Content);
 
                 if ((int)restResponse.StatusCode == 0)
                 {
-                    DataConnection.NotConnectedCallBack?.Invoke();
+                    await DataConnection.NotifyNotConnectedAsync();
                     return null;
                 }
 

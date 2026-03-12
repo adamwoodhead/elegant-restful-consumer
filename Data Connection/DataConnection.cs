@@ -43,6 +43,10 @@ namespace DataConnection
 
         internal static bool AutoAttemptLogin { get; set; }
 
+        private static readonly object NoConnectionSync = new object();
+
+        private static Task<bool> ActiveNoConnectionTask { get; set; }
+
         public static RollingCounterCollection RollingCounterCollection { get; set; }
 
         public static DateTime? LoggedInAt { get; set; }
@@ -188,17 +192,9 @@ namespace DataConnection
             {
                 if ((int)restResponse.StatusCode == 0)
                 {
-                    if (NotConnectedCallBack.Invoke())
+                    if (await NotifyNotConnectedAsync())
                     {
-                        RestRequest replicatedRequest = new RestRequest { Resource = restRequest.Resource, Method = restRequest.Method, RequestFormat = restRequest.RequestFormat };
-                        replicatedRequest.AddBody(restRequest.Parameters.Where(x => x.ContentType == ContentType.Json).First().Value);
-
-                        if (restRequest.Files.Count > 0)
-                        {
-                            restRequest.Files.ToList().ForEach(x => replicatedRequest.AddFile(x.Name, x.FileName));
-                        }
-
-                        return await RequestAsync<T>(replicatedRequest, cancellationToken);
+                        return await RequestAsync<T>(ReplicateRequest(restRequest), cancellationToken);
                     }
                 }
                 else if((int)restResponse.StatusCode == 429 )
@@ -207,25 +203,11 @@ namespace DataConnection
 
                     await Task.Delay(10000);
 
-                    RestRequest replicatedRequest = new RestRequest { Resource = restRequest.Resource, Method = restRequest.Method, RequestFormat = restRequest.RequestFormat };
-                    replicatedRequest.AddBody(restRequest.Parameters.Where(x => x.ContentType == ContentType.Json).First().Value);
-
-                    if (restRequest.Files.Count > 0)
-                    {
-                        restRequest.Files.ToList().ForEach(x => replicatedRequest.AddFile(x.Name, x.FileName));
-                    }
-
-                    return await RequestAsync<T>(replicatedRequest, cancellationToken);
+                    return await RequestAsync<T>(ReplicateRequest(restRequest), cancellationToken);
                 }
                 else if (restResponse.StatusCode == HttpStatusCode.Unauthorized)
                 {
-                    RestRequest replicatedRequest = new RestRequest { Resource = restRequest.Resource, Method = restRequest.Method, RequestFormat = restRequest.RequestFormat };
-                    replicatedRequest.AddBody(restRequest.Parameters.Where(x => x.ContentType == ContentType.Json).First().Value);
-
-                    if (restRequest.Files.Count > 0)
-                    {
-                        restRequest.Files.ToList().ForEach(x => replicatedRequest.AddFile(x.Name, x.FileName));
-                    }
+                    RestRequest replicatedRequest = ReplicateRequest(restRequest);
 
                     if (IsRefreshing)
                     {
@@ -276,6 +258,65 @@ namespace DataConnection
 #endif
 
             return dataObject;
+        }
+
+        private static RestRequest ReplicateRequest(RestRequest restRequest)
+        {
+            RestRequest replicatedRequest = new RestRequest
+            {
+                Resource = restRequest.Resource,
+                Method = restRequest.Method,
+                RequestFormat = restRequest.RequestFormat
+            };
+
+            var jsonBody = restRequest.Parameters.FirstOrDefault(x => x.ContentType == ContentType.Json);
+
+            if (jsonBody?.Value != null)
+            {
+                replicatedRequest.AddStringBody(jsonBody.Value.ToString(), ContentType.Json);
+            }
+
+            if (restRequest.Files.Count > 0)
+            {
+                restRequest.Files.ToList().ForEach(x => replicatedRequest.AddFile(x.Name, x.FileName));
+            }
+
+            return replicatedRequest;
+        }
+
+        internal static async Task<bool> NotifyNotConnectedAsync()
+        {
+            if (NotConnectedCallBack == null)
+            {
+                return false;
+            }
+
+            Task<bool> activeTask;
+
+            lock (NoConnectionSync)
+            {
+                if (ActiveNoConnectionTask == null || ActiveNoConnectionTask.IsCompleted)
+                {
+                    ActiveNoConnectionTask = Task.Run(() => NotConnectedCallBack.Invoke());
+                }
+
+                activeTask = ActiveNoConnectionTask;
+            }
+
+            try
+            {
+                return await activeTask;
+            }
+            finally
+            {
+                lock (NoConnectionSync)
+                {
+                    if (ReferenceEquals(ActiveNoConnectionTask, activeTask) && activeTask.IsCompleted)
+                    {
+                        ActiveNoConnectionTask = null;
+                    }
+                }
+            }
         }
     }
 }

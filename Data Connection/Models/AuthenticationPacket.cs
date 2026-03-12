@@ -24,6 +24,12 @@ namespace DataConnection.Models
         [JsonProperty("expires_in")]
         public int ExpiresIn { get; set; }
 
+        [JsonProperty("error")]
+        public string Error { get; set; }
+
+        [JsonProperty("message")]
+        public string ErrorMessage { get; set; }
+
         [JsonIgnore]
         public CancellationTokenSource CancellationTokenSource { get; private set; } = new CancellationTokenSource();
 
